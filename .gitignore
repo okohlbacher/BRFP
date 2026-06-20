@@ -1,0 +1,45 @@
+# Rust and Docker build output.
+target/
+target-linux/
+
+.DS_Store
+.env
+.env.*
+
+# Generated converter output and reports.
+*.mzpeak
+*.validation.json
+*.vendor.json
+*.mzML
+*.mzML.gz
+*.mgf
+*.parquet
+
+# Local archives, raw-data directories, caches, and proprietary vendor binaries.
+# The Bruker SDK is proprietary and must never be committed or redistributed.
+vendor/
+data/
+fixtures/private/
+tmp/
+timsdata-*.zip
+*.zip
+*.d/
+*.sqlite
+*.baf
+*.baf_idx
+*.baf_xtr
+*.tdf
+*.tdf_bin
+*.tsf
+*.tsf_bin
+*.u2
+*.unt
+*.hdx
+*.hss
+*.cdf
+*.so
+*.dll
+*.dylib
+
+# GSD planning (local-only per project config)
+.planning/

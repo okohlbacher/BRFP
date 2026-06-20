@@ -1,0 +1,31 @@
+[package]
+name = "brfp"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+description = "Bruker Raw File Parser: convert Bruker .d raw data to mzPeak"
+repository = "https://github.com/okohlbacher/BRFP"
+keywords = ["mass-spectrometry", "bruker", "mzpeak", "proteomics"]
+categories = ["command-line-utilities", "science"]
+
+[dependencies]
+arrow = "57.3.1"
+clap = { version = "4.5", features = ["derive"] }
+libloading = "0.8"
+mzdata = { version = "=0.64.1", features = ["serde", "zstd", "numpress", "bruker_tdf"] }
+mzpeak_prototyping = { git = "https://github.com/HUPO-PSI/mzPeak.git", rev = "b63302b927704c347157ed30d466d78e22c22848", default-features = false }
+parquet = "57.3.1"
+rusqlite = { version = "=0.31.0", features = ["bundled"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+wait-timeout = "0.2"
+zstd = "=0.12.4"
+
+[dev-dependencies]
+assert_cmd = "2.0"
+predicates = "3.1"
+tempfile = "3.13"
