@@ -9,10 +9,6 @@ use std::sync::Arc;
 use arrow::array::{ArrayRef, Float64Array, UInt32Array};
 use arrow::datatypes::{DataType, Field, Schema};
 use arrow::record_batch::RecordBatch;
-use parquet::arrow::ArrowWriter;
-use parquet::basic::{Compression, Encoding, ZstdLevel};
-use parquet::file::properties::WriterProperties;
-use parquet::schema::types::ColumnPath;
 use mzdata::prelude::{
     ByteArrayView, IonMobilityMeasure, IonProperties, SpectrumLike, SpectrumSource,
 };
@@ -37,6 +33,10 @@ use mzpeak_prototyping::{
     peak_series::{INTENSITY_ARRAY, MZ_ARRAY},
     writer::{AbstractMzPeakWriter, ArrayBuffersBuilder, CustomBuilderFromParameter},
 };
+use parquet::arrow::ArrowWriter;
+use parquet::basic::{Compression, Encoding, ZstdLevel};
+use parquet::file::properties::WriterProperties;
+use parquet::schema::types::ColumnPath;
 
 use crate::{
     baf::{BafOpenOptions, BafPolarity, BafProfileMissingMode, BafReader, BafSpectrum},
@@ -555,9 +555,8 @@ struct ImsCalibration {
 }
 
 fn read_ims_calibration(analysis_tdf: &Path) -> BrfpResult<ImsCalibration> {
-    let connection = rusqlite::Connection::open(analysis_tdf).map_err(|error| {
-        BrfpError::Reader(format!("open {}: {error}", analysis_tdf.display()))
-    })?;
+    let connection = rusqlite::Connection::open(analysis_tdf)
+        .map_err(|error| BrfpError::Reader(format!("open {}: {error}", analysis_tdf.display())))?;
     let get = |key: &str| -> BrfpResult<f64> {
         let value: String = connection
             .query_row(
@@ -612,7 +611,10 @@ pub fn write_tdf_to_ims_compact(
         .set_compression(Compression::ZSTD(
             ZstdLevel::try_new(9).map_err(|e| BrfpError::Writer(format!("zstd level: {e}")))?,
         ))
-        .set_column_encoding(ColumnPath::from("spectrum_index"), Encoding::DELTA_BINARY_PACKED)
+        .set_column_encoding(
+            ColumnPath::from("spectrum_index"),
+            Encoding::DELTA_BINARY_PACKED,
+        )
         .set_column_dictionary_enabled(ColumnPath::from("spectrum_index"), false)
         .set_column_encoding(ColumnPath::from("tof"), Encoding::DELTA_BINARY_PACKED)
         .set_column_dictionary_enabled(ColumnPath::from("tof"), false)
@@ -631,9 +633,9 @@ pub fn write_tdf_to_ims_compact(
     );
     let mut written = 0usize;
     for index in 0..count {
-        let spec = reader.get_spectrum_by_index(index).ok_or_else(|| {
-            BrfpError::Reader(format!("TDF spectrum {index} could not be read"))
-        })?;
+        let spec = reader
+            .get_spectrum_by_index(index)
+            .ok_or_else(|| BrfpError::Reader(format!("TDF spectrum {index} could not be read")))?;
         let mut rows: Vec<(u32, u32, f64)> = extract_peaks(&spec)?
             .into_iter()
             .map(|(mz, intensity, mobility)| {
@@ -666,10 +668,24 @@ pub fn write_tdf_to_ims_compact(
         }
         written += 1;
         if si.len() >= 4_000_000 {
-            write_ims_batch(&mut writer, &schema, &mut si, &mut tofs, &mut ints, &mut mobs)?;
+            write_ims_batch(
+                &mut writer,
+                &schema,
+                &mut si,
+                &mut tofs,
+                &mut ints,
+                &mut mobs,
+            )?;
         }
     }
-    write_ims_batch(&mut writer, &schema, &mut si, &mut tofs, &mut ints, &mut mobs)?;
+    write_ims_batch(
+        &mut writer,
+        &schema,
+        &mut si,
+        &mut tofs,
+        &mut ints,
+        &mut mobs,
+    )?;
     writer
         .close()
         .map_err(|e| BrfpError::Writer(format!("parquet close: {e}")))?;
@@ -1034,10 +1050,13 @@ fn ion_mobility_peak_schema(sample: &[BrfpSpectrum]) -> Option<ArrayBuffersBuild
             .find(|(array_type, _)| array_type.is_ion_mobility())
             .map(|(array_type, data)| (array_type.clone(), data.unit()))
     })?;
-    let mobility_field =
-        BufferName::new(BufferContext::Spectrum, im_type, BinaryDataArrayType::Float64)
-            .with_unit(im_unit)
-            .to_field();
+    let mobility_field = BufferName::new(
+        BufferContext::Spectrum,
+        im_type,
+        BinaryDataArrayType::Float64,
+    )
+    .with_unit(im_unit)
+    .to_field();
     Some(
         ArrayBuffersBuilder::default()
             .prefix("point")
