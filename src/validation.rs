@@ -540,9 +540,12 @@ mod tests {
     fn fake_validator(directory: &Path, message: &str, exit_code: i32) -> PathBuf {
         let path = directory.join("fake-validator.cmd");
         let mut file = std::fs::File::create(&path).unwrap();
+        // `%1` inside a parenthesised `if (...)` block is expanded at parse time,
+        // so it does not reflect a preceding `shift`. Use `goto` so the report
+        // path (`%~1` after the shift) re-expands and the JSON lands correctly.
         writeln!(
             file,
-            "@echo off\r\n:loop\r\nif \"%1\"==\"\" goto done\r\nif \"%1\"==\"--json\" (\r\n  shift\r\n  echo {{\"valid\":true}}>\"%1\"\r\n)\r\nshift\r\ngoto loop\r\n:done\r\necho {message}\r\nexit /b {exit_code}\r\n"
+            "@echo off\r\n:loop\r\nif \"%~1\"==\"\" goto done\r\nif \"%~1\"==\"--json\" goto writejson\r\nshift\r\ngoto loop\r\n:writejson\r\nshift\r\necho {{\"valid\":true}}>\"%~1\"\r\nshift\r\ngoto loop\r\n:done\r\necho {message}\r\nexit /b {exit_code}\r\n"
         )
         .unwrap();
         path
